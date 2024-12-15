@@ -8,3 +8,19 @@ screen.title("Turtle Dodging Game!")
 screen.bgcolor("sky blue")
 screen.setup(width=800, height=600)
 screen.tracer(0)
+
+# This is the base class for all of the moving objects in the code 
+class MovingObject:
+    def __init__(self, shape, color, x, y, speed):
+        self.object = turtle.Turtle()
+        self.object.shape(shape)
+        self.object.color(color)
+        self.object.penup()
+        self.object.goto(x, y)
+        self.speed = speed
+
+    def move(self):
+        pass  # This will be overrided by the subclasses
+
+    def reset_position(self):
+        pass  # This will be overrided by the subclasses
