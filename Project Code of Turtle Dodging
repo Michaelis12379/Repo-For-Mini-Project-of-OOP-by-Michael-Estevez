@@ -24,3 +24,14 @@ class MovingObject:
 
     def reset_position(self):
         pass  # This will be overrided by the subclasses
+
+# Class for objects that can move
+class MovableObject(MovingObject):
+    def __init__(self, shape, color, x, y, speed):
+        super().__init__(shape, color, x, y, speed)
+
+    def move(self):
+        pass  # Placeholder to be overridden by subclasses (Player, Enemy1, Enemy2)
+
+    def reset_position(self):
+        pass  # Placeholder method, also will be overridden
