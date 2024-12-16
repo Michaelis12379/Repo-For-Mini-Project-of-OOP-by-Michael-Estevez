@@ -25,13 +25,165 @@ class MovingObject:
     def reset_position(self):
         pass  # This will be overrided by the subclasses
 
-# Class for objects that can move
-class MovableObject(MovingObject):
-    def __init__(self, shape, color, x, y, speed):
-        super().__init__(shape, color, x, y, speed)
+#
+# Player class (inherits from MovableObject, which itself inherits from MovingObject)
+class Player(MovingObject):
+    def __init__(self):
+        super().__init__('turtle', 'black', 0, -250, 20)
+        self.object.setheading(90)  # Point the turtle upwards by default
+        self.speed = 15
+        self.is_invisible = False  # Track invinsibility state
+        self.invisibility_timer = 1  # Timer for invisibility duration
+    
+    def move_left(self):
+        if self.object.xcor() > -350:
+            self.object.setx(self.object.xcor() - self.speed)
+
+    def move_right(self):
+        if self.object.xcor() < 350:
+            self.object.setx(self.object.xcor() + self.speed)
+
+    def become_invisible(self, duration):
+        self.is_invisible = True
+        if self.is_invisible:
+            self.object.color("gold")
+            self.invisibility_timer = time.time() + duration
+        #self.invisibility_timer = time.time() + duration  # Set the timer for invinsibility duration
+
+    def check_invisibility(self):
+        if self.is_invisible and time.time() >= self.invisibility_timer:
+            self.object.color("black")
+            self.is_invisible = False
+              
+
+# Obstacle class (inherits from MovableObject)
+class Obstacle(MovingObject):
+    def __init__(self, x, y):
+        super().__init__('circle', 'red', x, y, 2)
+        self.object.shapesize(stretch_wid=2, stretch_len=2)
+    
+    def move(self):
+        self.object.sety(self.object.ycor() - self.speed)
+    
+    def reset_position(self):
+        if self.object.ycor() < -300:
+            self.object.goto(random.randint(-350, 350), random.randint(300, 400))
+
+# Enemy class (inherits from MovableObject)
+class Enemy(MovingObject):
+    def __init__(self, x, y):
+        super().__init__('square', 'purple', x, y, 3)  # Different shape and color for enemies
+        self.object.shapesize(stretch_wid=1, stretch_len=1)
 
     def move(self):
-        pass  # Placeholder to be overridden by subclasses (Player, Enemy1, Enemy2)
-
+        self.object.sety(self.object.ycor() - self.speed)
+    
     def reset_position(self):
-        pass  # Placeholder method, also will be overridden
+        if self.object.ycor() < -300:
+            self.object.goto(random.randint(-350, 350), random.randint(300, 400))
+
+# Invisibility Power-Up class (inherits from MovingObject)
+class InvisibilityPowerUp(MovingObject):
+    def __init__(self, x, y):
+        super().__init__('triangle', 'blue', x, y, 0)
+        self.object.shapesize(stretch_wid=1, stretch_len=1)
+    
+    def move(self, player_x, player_y):
+        # Move the power-up towards the player (i.e., toward the player's x and y position)
+        current_x, current_y = self.object.xcor(), self.object.ycor()
+        # Move the power-up gradually towards the player
+        step_x = (player_x - current_x) * 0.01  # Adjust this factor for speed
+        step_y = (player_y - current_y) * 0.05  # Adjust this factor for speed
+        
+        self.object.setx(current_x + step_x)
+        self.object.sety(current_y + step_y)
+    
+    def reset_position(self):
+        if self.object.ycor() < -300:
+            self.object.goto(random.randint(-350, 350), random.randint(300, 400))
+
+# Game class
+class Game:
+    def __init__(self):
+        self.player = Player()
+        self.obstacles = [Obstacle(random.randint(-350, 350), random.randint(300, 400)) for _ in range(10)]
+        self.enemies = [Enemy(random.randint(-350, 350), random.randint(300, 400)) for _ in range(15)]  # Add enemies
+        self.powerups = [InvisibilityPowerUp(random.randint(-350, 350), random.randint(300, 400)) for _ in range(1)]  # Add power-ups
+        self.score = 0
+        self.game_over = False
+        self.game_speed = 0.01
+
+    def check_collision(self):
+        for obstacle in self.obstacles + self.enemies:  # Check for collisions with both obstacles and enemies
+            if self.player.object.distance(obstacle.object) < 20 and not self.player.is_invisible:
+                return True
+        return False
+
+    def check_power_up_collision(self):
+        for powerup in self.powerups:
+            if self.player.object.distance(powerup.object) < 20:
+                self.player.become_invisible(1)  # Become invisible for 10 seconds
+                powerup.reset_position()  # Move the power-up off-screen
+
+    def update_score(self):
+        self.score += 1
+
+    def play(self):
+        while not self.game_over:
+            screen.update()  # Update the screen manually for better control
+
+            # Move obstacles
+            for obstacle in self.obstacles:
+                obstacle.move()
+                if obstacle.object.ycor() < -300:
+                    obstacle.reset_position()
+                    self.update_score()  # Increment score when an obstacle passes
+
+            # Move enemies
+            for enemy in self.enemies:
+                enemy.move()
+                if enemy.object.ycor() < -300:
+                    enemy.reset_position()
+                    self.update_score()  # Increment score when an enemy passes
+
+            # Move power-ups (make them fall towards the player)
+            for powerup in self.powerups:
+                powerup.move(self.player.object.xcor(), self.player.object.ycor())  # Move power-up toward the player
+                if powerup.object.ycor() < -300:
+                    powerup.reset_position()  # Reset position when it goes off-screen
+
+            # Check for collisions with power-ups
+            self.check_power_up_collision()
+
+            # Check for collision with obstacles/enemies
+            if self.check_collision():
+                self.game_over = True
+                print("Game Over!")
+                print(f"Final Score: {self.score}")
+                break
+
+            # Check if player is still invisible
+            self.player.check_invisibility()
+
+            time.sleep(self.game_speed)
+
+    def on_key_left(self):
+        self.player.move_left()
+
+    def on_key_right(self):
+        self.player.move_right()
+
+# Initialize the game
+game = Game()
+
+# Set up the keyboard bindings
+screen.listen()
+screen.onkey(game.on_key_left, "Left")
+screen.onkey(game.on_key_right, "Right")
+
+# Start the game
+game.play()
+
+# Close the screen on click
+screen.exitonclick()
+
